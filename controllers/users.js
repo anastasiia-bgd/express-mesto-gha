@@ -56,12 +56,14 @@ module.exports.createUser = (req, res, next) => {
       email,
       password: hash,
     }))
-    .then((user) => res.status(201)
+    .then(() => res.status(201)
       .send({
-        name: user.name,
-        about: user.about,
-        avatar: user.avatar,
-        email: user.email,
+        data: {
+          name,
+          about,
+          avatar,
+          email,
+        },
       }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
@@ -140,8 +142,8 @@ module.exports.login = (req, res, next) => {
       res.cookie('jwt', token, {
         maxAge: 3600000 * 24 * 7,
         httpOnly: true,
-      })
-        .send({ message: 'Авторизация прошла успешно!' });
+      });
+      res.send({ token });
     })
     .catch(next);
 };
