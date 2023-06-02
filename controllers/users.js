@@ -1,63 +1,80 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const NotFound = require('../errors/NotFound');
+const BadRequest = require('../errors/BadRequest');
+const Conflict = require('../errors/Conflict');
 const userSchema = require('../models/user');
 
-module.exports.getUsers = (req, res) => {
-  userSchema
-    .find({})
+module.exports.getUsers = (req, res, next) => {
+  userSchema.find({})
     .then((users) => res.send(users))
-    .catch((err) => res.status(500)
-      .send({ message: err.message }));
+    .catch(next);
 };
 
-module.exports.getUserById = (req, res) => {
-  const { userId } = req.params;
-
-  userSchema
-    .findById(userId)
-    .orFail()
-    .then((user) => res.send(user))
+module.exports.getUser = (req, res, next) => {
+  userSchema.findById(req.user._id)
+    .then((user) => {
+      if (!user) {
+        throw new NotFound('Сannot be found');
+      }
+      res.status(200)
+        .send(user);
+    })
     .catch((err) => {
       if (err.name === 'CastError') {
-        return res.status(400)
-          .send({ message: 'Bad Request' });
+        next(BadRequest('Incorrect data'));
+      } else if (err.message === 'NotFound') {
+        next(new NotFound('User cannot be found'));
+      } else {
+        next(err);
       }
-
-      if (err.name === 'DocumentNotFoundError') {
-        return res.status(404)
-          .send({ message: 'User with _id cannot be found' });
-      }
-
-      return res.status(500)
-        .send({ message: err.message });
     });
 };
 
-module.exports.createUser = (req, res) => {
+module.exports.getUserById = (req, res, next) => {
+  userSchema.findById(req.params.userId)
+    .orFail(() => {
+      throw new NotFound('Пользователь не найден');
+    })
+    .then((user) => res.send(user))
+    .catch(next);
+};
+
+module.exports.createUser = (req, res, next) => {
   const {
     name,
     about,
     avatar,
+    email,
+    password,
   } = req.body;
-
-  userSchema
-    .create({
+  bcrypt.hash(password, 10)
+    .then((hash) => userSchema.create({
       name,
       about,
       avatar,
-    })
+      email,
+      password: hash,
+    }))
     .then((user) => res.status(201)
-      .send(user))
+      .send({
+        name: user.name,
+        about: user.about,
+        avatar: user.avatar,
+        email: user.email,
+      }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(400)
-          .send({ message: 'Invalid data to create user' });
+        next(new BadRequest('Переданы некорректные данные'));
+      } else if (err.code === 11000) {
+        next(new Conflict('Пользователь с таким email уже существует'));
       } else {
-        res.status(500)
-          .send({ message: err.message });
+        next(err);
       }
     });
 };
 
-module.exports.updateUser = (req, res) => {
+module.exports.updateUser = (req, res, next) => {
   const {
     name,
     about,
@@ -75,20 +92,23 @@ module.exports.updateUser = (req, res) => {
         runValidators: true,
       },
     )
-    .then((user) => res.status(200)
-      .send(user))
-    .catch((err) => {
-      if (err.name === 'CastError' || err.name === 'ValidationError') {
-        return res.status(400)
-          .send({ message: 'Invalid data to update user' });
+    .then((user) => {
+      if (!user) {
+        throw new NotFound('Пользователь не найден');
       }
-
-      return res.status(500)
-        .send({ message: err.message });
+      res.status(200)
+        .send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError' || err.name === 'CastError') {
+        next(BadRequest('Данные некорректны'));
+      } else {
+        next(err);
+      }
     });
 };
 
-module.exports.updateAvatar = (req, res) => {
+module.exports.updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
 
   userSchema
@@ -104,11 +124,33 @@ module.exports.updateAvatar = (req, res) => {
       .send(user))
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
-        res.status(400)
-          .send({ message: 'Invalid data to update avatar' });
+        next(new BadRequest('Incorrect data'));
       } else {
-        res.status(500)
-          .send({ message: err.message });
+        next(err);
       }
     });
+};
+
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
+
+  return userSchema.findUserByCredentials(email, password)
+    .then((user) => {
+      const token = jwt.sign({ _id: user._id }, 'super-strong-secret', { expiresIn: '7d' });
+      res.cookie('jwt', token, {
+        maxAge: 3600000 * 24 * 7,
+        httpOnly: true,
+      })
+        .send({ message: 'Авторизация прошла успешно!' });
+    })
+    .catch(next);
+};
+
+module.exports.getCurrentUser = (req, res, next) => {
+  userSchema.findById(req.user._id)
+    .orFail(() => {
+      throw new NotFound('Пользователь с таким id не найден');
+    })
+    .then((user) => res.send({ user }))
+    .catch(next);
 };

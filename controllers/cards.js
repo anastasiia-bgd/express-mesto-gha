@@ -1,40 +1,34 @@
+const Forbidden = require('../errors/Forbidden');
+const NotFound = require('../errors/NotFound');
+const BadRequest = require('../errors/BadRequest');
 const cardSchema = require('../models/card');
 
-module.exports.getCards = (req, res) => {
+module.exports.getCards = (req, res, next) => {
   cardSchema
     .find({})
     .then((cards) => res.status(200)
       .send(cards))
-    .catch((err) => res.status(500)
-      .send({ message: err.message }));
+    .catch(next);
 };
 
-module.exports.deleteCard = (req, res) => {
+module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
 
   cardSchema
     .findByIdAndRemove(cardId)
     .then((card) => {
       if (!card) {
-        return res.status(404)
-          .send({ message: 'Not found: Invalid _id' });
+        throw new NotFound('Cannot be found');
       }
-
-      return res.status(200)
-        .send(card);
+      if (!card.owner.equals(req.user._id)) {
+        return next(new Forbidden('Card cannot be deleted'));
+      }
+      return card.deleteOne().then(() => res.send({ message: 'Card was deleted' }));
     })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        res.status(400)
-          .send({ message: 'Card with _id cannot be found' });
-      } else {
-        res.status(500)
-          .send({ message: err.message });
-      }
-    });
+    .catch(next);
 };
 
-module.exports.createCard = (req, res) => {
+module.exports.createCard = (req, res, next) => {
   const {
     name,
     link,
@@ -52,15 +46,14 @@ module.exports.createCard = (req, res) => {
     .catch((err) => {
       if (err.name === 'ValidationError') {
         res.status(400)
-          .send({ message: 'Invalid data for card creation' });
+          .send({ message: 'Некорректные данные' });
       } else {
-        res.status(500)
-          .send({ message: err.message });
+        next(err);
       }
     });
 };
 
-module.exports.addLike = (req, res) => {
+module.exports.addLike = (req, res, next) => {
   cardSchema
     .findByIdAndUpdate(
       req.params.cardId,
@@ -69,25 +62,19 @@ module.exports.addLike = (req, res) => {
     )
     .then((card) => {
       if (!card) {
-        return res.status(404)
-          .send({ message: 'Not found: Invalid _id' });
+        throw new NotFound('Пользователь не найден');
       }
-
-      return res.status(200)
-        .send(card);
+      res.send({ data: card });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        return res.status(400)
-          .send({ message: 'Invalid data to add like' });
+        return next(new BadRequest('Incorrect data'));
       }
-
-      return res.status(500)
-        .send({ message: err.message });
+      return next(err);
     });
 };
 
-module.exports.deleteLike = (req, res) => {
+module.exports.deleteLike = (req, res, next) => {
   cardSchema
     .findByIdAndUpdate(
       req.params.cardId,
@@ -96,20 +83,14 @@ module.exports.deleteLike = (req, res) => {
     )
     .then((card) => {
       if (!card) {
-        return res.status(404)
-          .send({ message: 'Not found: Invalid _id' });
+        throw new NotFound('Сannot be found');
       }
-
-      return res.status(200)
-        .send(card);
+      res.send({ data: card });
     })
     .catch((err) => {
-      if (err.name === 'CastError' || err.name === 'ValidationError') {
-        return res.status(400)
-          .send({ message: 'Invalid data to delete like' });
+      if (err.name === 'CastError') {
+        return next(new BadRequest('Incorrect data'));
       }
-
-      return res.status(500)
-        .send({ message: err.message });
+      return next(err);
     });
 };

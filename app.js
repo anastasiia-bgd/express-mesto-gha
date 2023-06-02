@@ -1,6 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = require('./routes/router');
+const auth = require('./middlewares/auth');
+
+const {
+  createUser,
+  login,
+} = require('./controllers/users');
 
 const {
   MONGO_URL = 'mongodb://localhost:27017/mestodb',
@@ -10,17 +16,26 @@ const {
 mongoose.connect(MONGO_URL);
 
 const app = express();
+
 app.use(express.json());
+app.post('/signin', login);
+app.post('/signup', createUser);
+app.use(auth);
+app.use(router);
 
-app.use((req, res, next) => {
-  req.user = {
-    _id: '646bdcd994f2c18b6548e771',
-  };
-
+app.use((error, req, res, next) => {
+  const {
+    status = 500,
+    message,
+  } = error;
+  res.status(status)
+    .send({
+      message: status === 500
+        ? 'На сервере произошла ошибка'
+        : message,
+    });
   next();
 });
-
-app.use(router);
 
 app.listen(PORT, () => {
   console.log(`App listening on port ${PORT}`);
