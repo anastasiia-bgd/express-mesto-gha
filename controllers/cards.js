@@ -1,12 +1,12 @@
+const cardSchema = require('../models/card');
 const Forbidden = require('../errors/Forbidden');
 const NotFound = require('../errors/NotFound');
 const BadRequest = require('../errors/BadRequest');
-const cardSchema = require('../models/card');
 
 module.exports.getCards = (req, res, next) => {
   cardSchema
     .find({})
-    .then((cards) => res.status(200)
+    .then((cards) => res.send({ data: cards })
       .send(cards))
     .catch(next);
 };
@@ -34,7 +34,6 @@ module.exports.createCard = (req, res, next) => {
     link,
   } = req.body;
   const owner = req.user._id;
-
   cardSchema
     .create({
       name,
@@ -42,14 +41,12 @@ module.exports.createCard = (req, res, next) => {
       owner,
     })
     .then((card) => res.status(201)
-      .send(card))
+      .send({ data: card }))
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res.status(400)
-          .send({ message: 'Некорректные данные' });
-      } else {
-        next(err);
+        return next(new BadRequest('Incorrect data'));
       }
+      return next(err);
     });
 };
 
@@ -62,7 +59,7 @@ module.exports.addLike = (req, res, next) => {
     )
     .then((card) => {
       if (!card) {
-        throw new NotFound('Пользователь не найден');
+        throw new NotFound('Сannot be found');
       }
       res.send({ data: card });
     })
