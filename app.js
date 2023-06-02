@@ -1,20 +1,23 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const { errors } = require('celebrate');
 const router = require('./routes/router');
-const auth = require('./middlewares/auth');
+// const auth = require('./middlewares/auth');
 
 const {
   MONGO_URL = 'mongodb://localhost:27017/mestodb',
   PORT = 3000,
 } = process.env;
 
-mongoose.connect(MONGO_URL);
-
 const app = express();
 
+mongoose.connect(MONGO_URL);
+
 app.use(express.json());
-app.use(auth);
-app.use(router);
+// app.use(auth);
+app.use('/', router);
+
+app.use(errors());
 
 app.use((error, req, res, next) => {
   const {
