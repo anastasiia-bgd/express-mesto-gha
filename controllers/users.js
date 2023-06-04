@@ -134,12 +134,3 @@ module.exports.login = (req, res, next) => {
     })
     .catch(next);
 };
-
-// module.exports.getCurrentUser = (req, res, next) => {
-//   userSchema.findById(req.user._id)
-//     .orFail(() => {
-//       throw new NotFound('Пользователь с таким id не найден');
-//     })
-//     .then((user) => res.send({ user }))
-//     .catch(next);
-// };
