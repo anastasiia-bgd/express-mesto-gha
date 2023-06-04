@@ -1,7 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const { errors } = require('celebrate');
-const cookieParser = require('cookie-parser');
 const router = require('./routes/router');
 
 const {
@@ -12,7 +11,6 @@ const {
 const app = express();
 
 app.use(express.json());
-app.use(cookieParser());
 mongoose.connect(MONGO_URL);
 
 app.use('/', router);

@@ -130,16 +130,11 @@ module.exports.login = (req, res, next) => {
   return userSchema.findUserByCredentials(email, password)
     .then((user) => {
       const token = jwt.sign({ _id: user._id }, 'super-strong-secret', { expiresIn: '7d' });
-      res.send({ token });
+      res.cookie('jwt', token, {
+        maxAge: 3600000 * 24 * 7,
+        httpOnly: true,
+      })
+        .send({ message: 'Авторизация прошла успешно!' });
     })
     .catch(next);
 };
-
-// module.exports.getCurrentUser = (req, res, next) => {
-//   userSchema.findById(req.user._id)
-//     .orFail(() => {
-//       throw new NotFound('Пользователь с таким id не найден');
-//     })
-//     .then((user) => res.send({ user }))
-//     .catch(next);
-// };
