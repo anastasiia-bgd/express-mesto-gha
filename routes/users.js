@@ -5,7 +5,7 @@ const {
   getUserById,
   updateUser,
   updateAvatar,
-  getUser,
+  getCurrentUser,
 } = require('../controllers/users');
 
 const {
@@ -15,9 +15,9 @@ const {
 } = require('../middlewares/validation');
 
 userRoutes.get('/', getUsers);
+userRoutes.get('/me', getCurrentUser);
 userRoutes.get('/:userId', validationUserId, getUserById);
 userRoutes.patch('/me', validationUpdateProfile, updateUser);
 userRoutes.patch('/me/avatar', validationUpdateAvatar, updateAvatar);
-userRoutes.get('/me', getUser);
 
 module.exports = userRoutes;

@@ -11,27 +11,25 @@ module.exports.getUsers = (req, res, next) => {
     .catch(next);
 };
 
-module.exports.getUser = (req, res, next) => {
-  userSchema.findOne({ _id: req.user._id })
-    .then((user) => {
-      if (!user) {
-        return next(new NotFound('User with such id is not found'));
-      }
-      return res.send({ data: user });
-    })
-    .catch((err) => {
-      if (err.name === 'CastError') {
-        return next(new BadRequest('Incorrect user data'));
-      }
-      return next(err);
-    });
-};
+// module.exports.getUser = (req, res, next) => {
+//   userSchema.findOne({ _id: req.user._id })
+//     .then((user) => {
+//       if (!user) {
+//         return next(new NotFound('User with such id is not found'));
+//       }
+//       return res.send({ data: user });
+//     })
+//     .catch((err) => {
+//       if (err.name === 'CastError') {
+//         return next(new BadRequest('Incorrect user data'));
+//       }
+//       return next(err);
+//     });
+// };
 
 module.exports.getUserById = (req, res, next) => {
   userSchema.findById(req.params.userId)
-    .orFail(() => {
-      throw new NotFound('Пользователь не найден');
-    })
+    .orFail()
     .then((user) => res.send({ data: user }))
     .catch((err) => {
       if (err.name === 'DocumentNotFoundError') {
@@ -132,5 +130,14 @@ module.exports.login = (req, res, next) => {
       const token = jwt.sign({ _id: user._id }, 'super-strong-secret', { expiresIn: '7d' });
       res.send({ token });
     })
+    .catch(next);
+};
+
+module.exports.getCurrentUser = (req, res, next) => {
+  userSchema.findById(req.user._id)
+    .orFail(() => {
+      throw new NotFound('Пользователь с таким id не найден');
+    })
+    .then((user) => res.send({ user }))
     .catch(next);
 };

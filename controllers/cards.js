@@ -6,6 +6,7 @@ const BadRequest = require('../errors/BadRequest');
 module.exports.getCards = (req, res, next) => {
   cardSchema
     .find({})
+    .populate('owner')
     .then((cards) => res.send({ data: cards }))
     .catch(next);
 };
