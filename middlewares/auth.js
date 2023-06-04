@@ -6,13 +6,13 @@ module.exports = (req, res, next) => {
   let payload;
 
   if (!authorization || !authorization.startsWith('Bearer ')) {
-    throw new Unauthorized('You need to log in');
+    return next(new Unauthorized('You need to log in'));
   }
 
   const token = authorization.replace('Bearer ', '');
 
   try {
-    payload = jwt.verify(token, 'cat');
+    payload = jwt.verify(token, 'super-strong-secret');
   } catch (err) {
     return next(new Unauthorized('You need to log in'));
   }

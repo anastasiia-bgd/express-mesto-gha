@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const { errors } = require('celebrate');
 const router = require('./routes/router');
-// const auth = require('./middlewares/auth');
 
 const {
   MONGO_URL = 'mongodb://localhost:27017/mestodb',
@@ -11,10 +10,9 @@ const {
 
 const app = express();
 
+app.use(express.json());
 mongoose.connect(MONGO_URL);
 
-app.use(express.json());
-// app.use(auth);
 app.use('/', router);
 
 app.use(errors());

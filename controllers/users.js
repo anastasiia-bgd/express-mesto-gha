@@ -12,22 +12,18 @@ module.exports.getUsers = (req, res, next) => {
 };
 
 module.exports.getUser = (req, res, next) => {
-  userSchema.findById(req.user._id)
+  userSchema.findOne({ _id: req.user._id })
     .then((user) => {
       if (!user) {
-        throw new NotFound('Сannot be found');
+        return next(new NotFound('User with such id is not found'));
       }
-      res.status(200)
-        .send(user);
+      return res.send({ data: user });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
-        next(BadRequest('Incorrect data'));
-      } else if (err.message === 'NotFound') {
-        next(new NotFound('User cannot be found'));
-      } else {
-        next(err);
+        return next(new BadRequest('Incorrect user data'));
       }
+      return next(err);
     });
 };
 
@@ -36,8 +32,13 @@ module.exports.getUserById = (req, res, next) => {
     .orFail(() => {
       throw new NotFound('Пользователь не найден');
     })
-    .then((user) => res.send(user))
-    .catch(next);
+    .then((user) => res.send({ data: user }))
+    .catch((err) => {
+      if (err.name === 'DocumentNotFoundError') {
+        return next(new NotFound('User with such id is not found'));
+      }
+      return next(err);
+    });
 };
 
 module.exports.createUser = (req, res, next) => {
@@ -56,13 +57,13 @@ module.exports.createUser = (req, res, next) => {
       email,
       password: hash,
     }))
-    .then(() => res.status(201)
+    .then((user) => res.status(201)
       .send({
         data: {
-          name,
-          about,
-          avatar,
-          email,
+          name: user.name,
+          about: user.about,
+          avatar: user.avatar,
+          email: user.email,
         },
       }))
     .catch((err) => {
@@ -81,7 +82,6 @@ module.exports.updateUser = (req, res, next) => {
     name,
     about,
   } = req.body;
-
   userSchema
     .findByIdAndUpdate(
       req.user._id,
@@ -94,25 +94,18 @@ module.exports.updateUser = (req, res, next) => {
         runValidators: true,
       },
     )
-    .then((user) => {
-      if (!user) {
-        throw new NotFound('Пользователь не найден');
-      }
-      res.status(200)
-        .send(user);
-    })
+    .orFail()
+    .then((user) => res.send({ data: user }))
     .catch((err) => {
-      if (err.name === 'ValidationError' || err.name === 'CastError') {
-        next(BadRequest('Данные некорректны'));
-      } else {
-        next(err);
+      if (err.name === 'DocumentNotFoundError') {
+        return next(new NotFound('User with such id is not found'));
       }
+      return next(err);
     });
 };
 
 module.exports.updateAvatar = (req, res, next) => {
   const { avatar } = req.body;
-
   userSchema
     .findByIdAndUpdate(
       req.user._id,
@@ -122,37 +115,31 @@ module.exports.updateAvatar = (req, res, next) => {
         runValidators: true,
       },
     )
-    .then((user) => res.status(200)
-      .send(user))
+    .orFail()
+    .then((user) => res.send({ data: user }))
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
-        next(new BadRequest('Incorrect data'));
-      } else {
-        next(err);
+        next(new BadRequest('Incorrect avatar data'));
       }
+      return next(err);
     });
 };
 
 module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
-
   return userSchema.findUserByCredentials(email, password)
     .then((user) => {
       const token = jwt.sign({ _id: user._id }, 'super-strong-secret', { expiresIn: '7d' });
-      res.cookie('jwt', token, {
-        maxAge: 3600000 * 24 * 7,
-        httpOnly: true,
-      });
       res.send({ token });
     })
     .catch(next);
 };
 
-module.exports.getCurrentUser = (req, res, next) => {
-  userSchema.findById(req.user._id)
-    .orFail(() => {
-      throw new NotFound('Пользователь с таким id не найден');
-    })
-    .then((user) => res.send({ user }))
-    .catch(next);
-};
+// module.exports.getCurrentUser = (req, res, next) => {
+//   userSchema.findById(req.user._id)
+//     .orFail(() => {
+//       throw new NotFound('Пользователь с таким id не найден');
+//     })
+//     .then((user) => res.send({ user }))
+//     .catch(next);
+// };

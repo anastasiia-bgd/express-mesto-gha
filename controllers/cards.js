@@ -6,19 +6,17 @@ const BadRequest = require('../errors/BadRequest');
 module.exports.getCards = (req, res, next) => {
   cardSchema
     .find({})
-    .then((cards) => res.send({ data: cards })
-      .send(cards))
+    .then((cards) => res.send({ data: cards }))
     .catch(next);
 };
 
 module.exports.deleteCard = (req, res, next) => {
   const { cardId } = req.params;
-
   cardSchema
     .findByIdAndRemove(cardId)
     .then((card) => {
       if (!card) {
-        throw new NotFound('Cannot be found');
+        return next(new NotFound('Cannot be found'));
       }
       if (!card.owner.equals(req.user._id)) {
         return next(new Forbidden('Card cannot be deleted'));
@@ -59,9 +57,9 @@ module.exports.addLike = (req, res, next) => {
     )
     .then((card) => {
       if (!card) {
-        throw new NotFound('Сannot be found');
+        return next(new NotFound('Сannot be found'));
       }
-      res.send({ data: card });
+      return res.send({ data: card });
     })
     .catch((err) => {
       if (err.name === 'CastError') {
@@ -80,12 +78,12 @@ module.exports.deleteLike = (req, res, next) => {
     )
     .then((card) => {
       if (!card) {
-        throw new NotFound('Сannot be found');
+        return next(new NotFound('Сannot be found'));
       }
-      res.send({ data: card });
+      return res.send({ data: card });
     })
     .catch((err) => {
-      if (err.name === 'CastError') {
+      if (err.name === 'CastError' || err.name === 'ValidationError') {
         return next(new BadRequest('Incorrect data'));
       }
       return next(err);
