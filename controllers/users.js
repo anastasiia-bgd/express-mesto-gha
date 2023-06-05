@@ -11,22 +11,6 @@ module.exports.getUsers = (req, res, next) => {
     .catch(next);
 };
 
-// module.exports.getUser = (req, res, next) => {
-//   userSchema.findOne({ _id: req.user._id })
-//     .then((user) => {
-//       if (!user) {
-//         return next(new NotFound('User with such id is not found'));
-//       }
-//       return res.send({ data: user });
-//     })
-//     .catch((err) => {
-//       if (err.name === 'CastError') {
-//         return next(new BadRequest('Incorrect user data'));
-//       }
-//       return next(err);
-//     });
-// };
-
 module.exports.getUserById = (req, res, next) => {
   userSchema.findById(req.params.userId)
     .orFail()
@@ -117,7 +101,7 @@ module.exports.updateAvatar = (req, res, next) => {
     .then((user) => res.send({ data: user }))
     .catch((err) => {
       if (err.name === 'CastError' || err.name === 'ValidationError') {
-        next(new BadRequest('Incorrect avatar data'));
+        return next(new BadRequest('Incorrect avatar data'));
       }
       return next(err);
     });
