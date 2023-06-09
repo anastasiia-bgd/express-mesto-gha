@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const { errors } = require('celebrate');
 const cookieParser = require('cookie-parser');
-const cors = require('cors');
 const router = require('./routes/router');
 
 const {
@@ -11,15 +10,6 @@ const {
 } = process.env;
 
 const app = express();
-
-app.use(cors({
-  origin: [
-    'http://localhost:3001',
-    'https://anastasiia.mesto.nomoredomains.rocks',
-  ],
-  credentials: true,
-  maxAge: 30,
-}));
 
 app.use(express.json());
 
